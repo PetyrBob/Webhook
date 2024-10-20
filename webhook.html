@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harry Potter Character</title>
+    <style>
+        #characterInfo {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-width: 400px;
+        }
+
+        #characterInfo img {
+            max-width: 100%;
+        }
+
+        #characterInfo p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Harry Potter to Webhook - System Integration and Architecture Project</h1>
+
+    <label for="characterSelect">Select a character:</label><br><br>
+    <select id="characterSelect">
+        <option value="">Loading characters...</option>
+    </select><br><br>
+
+    <button id="sendCharacterBtn">Send Character</button>
+
+    <div id="characterInfo" style="display: none;">
+        <h2>Character Information</h2>
+        <img id="characterImage" src="" alt="Character Image">
+        <p><strong>Name:</strong> <span id="characterName"></span></p>
+        <p><strong>House:</strong> <span id="characterHouse"></span></p>
+        <p><strong>Actor:</strong> <span id="characterActor"></span></p>
+    </div>
+
+    <script>
+        let characters = []; // Store characters data for easy access
+
+        // Fetch characters from HP API and populate the dropdown
+        async function loadCharacters() {
+            try {
+                const apiUrl = 'https://hp-api.herokuapp.com/api/characters';
+                const response = await fetch(apiUrl);
+                characters = await response.json(); // Store the characters array
+
+                // Populate the dropdown with character names
+                const characterSelect = document.getElementById('characterSelect');
+                characterSelect.innerHTML = ''; // Clear default option
+                characters.forEach(character => {
+                    const option = document.createElement('option');
+                    option.value = character.name;
+                    option.textContent = character.name;
+                    characterSelect.appendChild(option);
+                });
+
+                // Add event listener to display character info on selection
+                characterSelect.addEventListener('change', displayCharacterInfo);
+            } catch (error) {
+                console.error('Error fetching characters:', error);
+                alert('Failed to load characters');
+            }
+        }
+
+        // Display selected character's information and image
+        function displayCharacterInfo() {
+            const characterSelect = document.getElementById('characterSelect');
+            const selectedCharacter = characterSelect.value;
+
+            if (!selectedCharacter) {
+                document.getElementById('characterInfo').style.display = 'none';
+                return;
+            }
+
+            // Find the selected character's details
+            const character = characters.find(c => c.name === selectedCharacter);
+
+            // Update the character info section
+            document.getElementById('characterName').textContent = character.name;
+            document.getElementById('characterHouse').textContent = character.house || 'N/A';
+            document.getElementById('characterActor').textContent = character.actor || 'N/A';
+            document.getElementById('characterImage').src = character.image || 'https://via.placeholder.com/300?text=No+Image+Available';
+
+            // Show the character info section
+            document.getElementById('characterInfo').style.display = 'block';
+        }
+
+        // Function to send selected character name and info to the webhook
+        async function sendCharacter() {
+            const characterSelect = document.getElementById('characterSelect');
+            const selectedCharacter = characterSelect.value;
+
+            if (!selectedCharacter) {
+                alert("Please select a character.");
+                return;
+            }
+
+            // Find the selected character's details to get image URL and info
+            const character = characters.find(c => c.name === selectedCharacter);
+            const imageUrl = character.image || 'https://via.placeholder.com/300?text=No+Image+Available';
+
+            try {
+                // CORS Proxy to bypass CORS policy
+                const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+                const webhookUrl = corsProxy + 'https://mseufeduph.webhook.office.com/webhookb2/8ef714f6-81de-4b42-ad2e-c262d5ce04d1@ddedb3cc-596d-482b-8e8c-6cc149a7a7b7/IncomingWebhook/9ef0b875219140eb8135437505a9d31c/e0510d66-17c3-43f4-a3ef-0cf6a6fba189/V24duT1GXj0kuDCkgbXHPSG6tCe2ZunOnaM30gWrZrYuo1';
+
+                // Payload to send to the webhook (character name, image URL, and other info)
+                const payload = {
+                    text: `Selected character: ${selectedCharacter}\n` + 
+                          `House: ${character.house || 'N/A'}\n` +
+                          `Actor: ${character.actor || 'N/A'}\n` +
+                          `![${selectedCharacter}](${imageUrl})` // Markdown for image
+                };
+
+                // Send the character name to the webhook using no-cors mode
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', // Set mode to 'no-cors'
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Since no-cors mode does not allow checking the response, we'll assume it sent
+                alert('Character sent successfully!');
+                
+            } catch (error) {
+                console.error('Error occurred:', error);
+                alert('An error occurred while sending the character.');
+            }
+        }
+
+        // Load characters on page load
+        document.addEventListener('DOMContentLoaded', loadCharacters);
+
+        // Add event listener to the send button
+        document.getElementById('sendCharacterBtn').addEventListener('click', sendCharacter);
+    </script>
+</body>
+</html>
